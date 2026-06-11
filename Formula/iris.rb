@@ -2,7 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 class Iris < Formula
-  desc "Pure-Swift ARM64/ARM64E disassembler with a corpus-proven semantic layer"
+  desc "Pure-Swift ARM64/ARM64E disassembler with a semantic layer validated against LLVM"
   homepage "https://github.com/mi11ione/iris"
   version "0.1.0"
   license "Apache-2.0"
