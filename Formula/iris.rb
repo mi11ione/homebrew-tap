@@ -4,22 +4,22 @@
 class Iris < Formula
   desc "Pure-Swift ARM64/ARM64E disassembler with a semantic layer validated against LLVM"
   homepage "https://github.com/mi11ione/iris"
-  version "0.1.0"
+  version "0.2.0"
   license "Apache-2.0"
 
   on_macos do
-    url "https://github.com/mi11ione/iris/releases/download/0.1.0/iris-0.1.0-macos-universal.tar.gz"
-    sha256 "63ea5c1ee3ad5bf7eedbaa8a7a33870a41872f64ed3f4ec8f47982ed02e2b02c"
+    url "https://github.com/mi11ione/iris/releases/download/0.2.0/iris-0.2.0-macos-universal.tar.gz"
+    sha256 "66daca571110624216715997e75ad701d05963aaedc45d1c4f18fee7add7fdf1"
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/mi11ione/iris/releases/download/0.1.0/iris-0.1.0-linux-x86_64.tar.gz"
-      sha256 "b451b702fec1978745fdb65f674932a77f01bc61b94156287708cadeff438de8"
+      url "https://github.com/mi11ione/iris/releases/download/0.2.0/iris-0.2.0-linux-x86_64.tar.gz"
+      sha256 "03bc4b64476cf1165de2c93c60fdf77f1e2b2704013b80a2f3ffe6774c6e0d08"
     end
     on_arm do
-      url "https://github.com/mi11ione/iris/releases/download/0.1.0/iris-0.1.0-linux-aarch64.tar.gz"
-      sha256 "a58e2dbfc0d96476e66c285d8a86b08744cecfa9774b1ece8edc1212f59e9090"
+      url "https://github.com/mi11ione/iris/releases/download/0.2.0/iris-0.2.0-linux-aarch64.tar.gz"
+      sha256 "3a480626302923e4b2c0c044bbf698cb022f26c9d7521ec450187c82384572a9"
     end
   end
 
