@@ -1,0 +1,147 @@
+# Copyright (c) 2026 Roman Zhuzhgov
+# Licensed under the Apache License, Version 2.0
+#
+# Formula sync: brings every formula in this tap up to its project's latest
+# GitHub Release, and proves the result is installable.
+#
+# WHY THIS LIVES HERE, not in the projects. A release pipeline in another
+# repo cannot push to this one with its built-in GITHUB_TOKEN — it needs a
+# cross-repo PAT, which has to be created, pasted into each project's
+# secrets, and re-pasted every time it expires. Miss any of that and the
+# release still goes green while this tap keeps serving the previous
+# version: an install that looks successful and isn't. That is not
+# hypothetical — iris shipped 0.5.0 and 0.6.0 while the formula here sat at
+# 0.4.0, and nobody found out from CI.
+#
+# Run from inside the tap, the token that ships with every Actions run
+# already has write access to this repo. No secret, nothing to expire.
+#
+# Each formula names its own source repo in `homepage`, so this discovers
+# what to sync rather than hardcoding a list — a formula added later is
+# covered with no change here.
+#
+# The projects may ALSO push instantly on release (see tap.yml in swiftfilt
+# and iris, gated on a HOMEBREW_TAP_TOKEN secret). The two do not conflict:
+# whichever runs second finds nothing to do. This is the floor — the tap
+# converges on its own even when no secret exists anywhere.
+
+name: Sync formulae
+
+on:
+  schedule:
+    # Every 6 hours, off the top of the hour to dodge the cron rush.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync:
+    name: Sync formulae to latest releases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      bumped: ${{ steps.bump.outputs.bumped }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Bump whatever is behind
+        id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          bumped=""
+          for formula in Formula/*.rb; do
+            name="$(basename "${formula}" .rb)"
+            repo="$(awk -F'"' '/^[[:space:]]*homepage[[:space:]]+"/ { sub("https://github.com/", "", $2); print $2; exit }' "${formula}")"
+            current="$(awk -F'"' '/^[[:space:]]*version[[:space:]]+"/ { print $2; exit }' "${formula}")"
+            if [ -z "${repo}" ] || [ -z "${current}" ]; then
+              echo "::warning::${formula} has no homepage or version line — skipping"
+              continue
+            fi
+
+            latest="$(gh release view --repo "${repo}" --json tagName -q .tagName 2>/dev/null || true)"
+            if [ -z "${latest}" ]; then
+              echo "::warning::${repo} has no published release — leaving ${name} at ${current}"
+              continue
+            fi
+            if [ "${latest}" = "${current}" ]; then
+              echo "${name}: ${current}, up to date"
+              continue
+            fi
+
+            echo "${name}: ${current} -> ${latest}"
+            # A release without checksums.txt is one this tap cannot verify,
+            # so it is left alone rather than trusted. Loud, not fatal: one
+            # project's bad release must not block another's good one.
+            if ! curl -fsSL --retry 3 -o "checksums-${name}.txt" \
+              "https://github.com/${repo}/releases/download/${latest}/checksums.txt"; then
+              echo "::warning::${repo} ${latest} has no checksums.txt — leaving ${name} at ${current}"
+              continue
+            fi
+            Scripts/bump-formula.sh "${formula}" "${latest}" "checksums-${name}.txt"
+            bumped="${bumped}${bumped:+ }${name} ${latest}"
+          done
+          rm -f checksums-*.txt
+          echo "bumped=${bumped}" >> "$GITHUB_OUTPUT"
+
+      # Verifies EVERY formula, not just the bumped ones: a release asset
+      # deleted or re-uploaded upstream breaks an install that used to work,
+      # and this is the only thing watching for that.
+      - name: Verify every formula
+        run: |
+          set -o pipefail
+          for formula in Formula/*.rb; do
+            echo "--- ${formula}"
+            ruby -c "${formula}" > /dev/null
+            awk '/^[[:space:]]*url[[:space:]]+"/ { u = $2 }
+                 /^[[:space:]]*sha256[[:space:]]+"/ { print u, $2 }' \
+              "${formula}" | tr -d '"' > pairs.txt
+            test -s pairs.txt
+            while read -r url sha; do
+              curl -fsSL --retry 3 -o asset.tar.gz "${url}"
+              echo "${sha}  asset.tar.gz" | sha256sum -c - | sed "s|asset.tar.gz|$(basename "${url}")|"
+            done < pairs.txt
+          done
+          rm -f pairs.txt asset.tar.gz
+
+      - name: Commit and push
+        if: steps.bump.outputs.bumped != ''
+        env:
+          BUMPED: ${{ steps.bump.outputs.bumped }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula
+          git commit -q -m "${BUMPED}"
+          git push origin HEAD:main
+          echo "pushed: ${BUMPED}"
+
+  # Only worth a macOS runner when something actually changed. Reads the tap
+  # over the network, so it sees the pushed commit rather than a local copy.
+  install:
+    name: Install what changed
+    needs: [sync]
+    if: needs.sync.outputs.bumped != ''
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: brew install each bumped formula
+        env:
+          BUMPED: ${{ needs.sync.outputs.bumped }}
+        run: |
+          set -o pipefail
+          # "name version name version ..." — the pairs the sync job wrote.
+          set -- ${BUMPED}
+          while [ "$#" -ge 2 ]; do
+            name="$1"; version="$2"; shift 2
+            brew install "mi11ione/tap/${name}"
+            test "$("${name}" --version)" = "${name} ${version}"
+            echo "${name} ${version}: installs and runs"
+          done
