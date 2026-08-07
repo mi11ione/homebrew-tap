@@ -4,22 +4,22 @@
 class Swiftfilt < Formula
   desc "Swift demangler you can pipe, script, and embed — c++filt for Swift"
   homepage "https://github.com/mi11ione/swiftfilt"
-  version "1.0.1"
+  version "1.0.2"
   license "Apache-2.0"
 
   on_macos do
-    url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.1/swiftfilt-1.0.1-macos-universal.tar.gz"
-    sha256 "dd78054ee1d52718b69a473e770dd6de1fc9ab720abfb0a9a7835d47801d1793"
+    url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.2/swiftfilt-1.0.2-macos-universal.tar.gz"
+    sha256 "8e48c74b7667756f03a27b70db21b016755e230df3b5c4ce6e358bfdfbe1a8fc"
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.1/swiftfilt-1.0.1-linux-x86_64.tar.gz"
-      sha256 "2a1f2f3e0b03a6ed6c0b83479f1d8e4dc12495bc03d2e95ed389739a3696133d"
+      url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.2/swiftfilt-1.0.2-linux-x86_64.tar.gz"
+      sha256 "72bfa178ed1fd1f92b348f6ffa1b8c9c6632e7a46f1848b4527fa0426d340bde"
     end
     on_arm do
-      url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.1/swiftfilt-1.0.1-linux-aarch64.tar.gz"
-      sha256 "bbe46212bf43a714695d448d419077e8d5bc0aa47b55e77e5efafe97bbe780de"
+      url "https://github.com/mi11ione/swiftfilt/releases/download/1.0.2/swiftfilt-1.0.2-linux-aarch64.tar.gz"
+      sha256 "ae03264a54f412c8fd7e68dfe5931e38b0e2f9dac924f71a74835ed3d052ecf9"
     end
   end
 
